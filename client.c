@@ -43,15 +43,6 @@ void *recive(void *server) {
     }
 }
 
-
-char *concat(const char *s1, const char *s2) {
-    char *result = malloc(strlen(s1) + strlen(s2) + 1);//+1 for the zero-terminator
-    //in real code you would check for errors in malloc here
-    strcpy(result, s1);
-    strcat(result, s2);
-    return result;
-}
-
 int main(int argc, char *argv[]) {
 
     struct sockaddr_in mySockAddr;    //struktura opisujaca adres socketu
@@ -81,6 +72,7 @@ int main(int argc, char *argv[]) {
         printf("CONNECTION SUCCESS\n");
     }
 
+    //sizeof(structClientData.myName)
     printf("Your name: ");
     fgets(structClientData.myName, sizeof(structClientData.myName), stdin);//read first line
     structClientData.myName[strlen(structClientData.myName) - 1] = '\0';
@@ -91,27 +83,26 @@ int main(int argc, char *argv[]) {
         perror("send() failed\n");
     }
 
-    printf("Send to: ");
-    fgets(structClientData.destName, sizeof(structClientData.destName), stdin);
-    structClientData.destName[strlen(structClientData.destName) - 1] = '\0';
-
     pthread_t recive_thread;
     if ((pthread_create(&recive_thread, NULL, recive, (void *) &mySocket)) < 0) {
         perror("could not create thread");
         exit(EXIT_FAILURE);
     }
 
-    printf("Write message to %s: \n", structClientData.destName);
+    sleep(1);
 
     while (1) {
 
+        printf("Write message: \n");
         fgets(structClientData.message, sizeof(structClientData.message), stdin);
         structClientData.message[strlen(structClientData.message) - 1] = '\0';
 
-        memcpy(buffer, &structClientData, BUFFER_LENGTH);
+        printf("Send to: ");
+        fgets(structClientData.destName, sizeof(structClientData.destName), stdin);
+        structClientData.destName[strlen(structClientData.destName) - 1] = '\0';
 
-        int sendToServer = send(mySocket, buffer, BUFFER_LENGTH, 0);
-        if (sendToServer == -1) {
+        memcpy(buffer, &structClientData, BUFFER_LENGTH);
+        if (send(mySocket, buffer, BUFFER_LENGTH, 0) == -1) {
             perror("send() failed\n");
         }
     }

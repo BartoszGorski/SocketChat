@@ -36,6 +36,14 @@ struct clientData {
     struct clientMessageDate message[MAX_CLIENTS];
 };
 
+char *concat(const char *s1, const char *s2) {
+    char *result = malloc(strlen(s1) + strlen(s2) + 1);//+1 for the zero-terminator
+    //in real code you would check for errors in malloc here
+    strcpy(result, s1);
+    strcat(result, s2);
+    return result;
+}
+
 void sendback(int clientConnection, char message[]) {
     int sendBack = send(clientConnection, message, MESSAGE_LENGTH, 0);
     if (sendBack == -1) {
@@ -43,12 +51,30 @@ void sendback(int clientConnection, char message[]) {
     }
 }
 
+void sendOnlinelist(struct clientData *clients, int index ){
+    printf("-----Online-----\n");
+    strcpy(clients->message[index].message,"-----Online-----\n");
+    for (int j = 0; j < MAX_CLIENTS; j++) {
+        if (clients->client_id[j] != -1) {
+            printf("%d %s\n",j, clients->name[j]);
+            strcpy(clients->message[index].message,concat(clients->message[index].message,clients->name[j]));
+            strcpy(clients->message[index].message,concat(clients->message[index].message,"\n"));
+        }
+    }
+    printf("----------------\n");
+    strcpy(clients->message[index].message, concat(clients->message[index].message,"----------------\n"));
+
+    for (int j = 0; j < MAX_CLIENTS; j++) {
+        if (clients->client_id[j] != -1) {
+            sendback(clients->client_id[j], clients->message[index].message);
+        }
+    }
+}
+
 void *recive(void *clientData) {
 
     struct clientData *clients;
     clients = (struct clientData *) clientData;
-
-//    struct clientMessageDate reciveMessage;
 
     int index = clients->indexLastConnected;
     char buffer[BUFFER_LENGTH];
@@ -61,37 +87,52 @@ void *recive(void *clientData) {
             return 0;
         }
 
-        memcpy(&clients->message[index], buffer, BUFFER_LENGTH);
-
-        int rc = strcmp(clients->name[index], "\0");
-        if(rc == 0){
-            strncpy(clients->name[index],clients->message[index].myName,NAME_SIZE);
-        }
-
-        printf("Online:\n");
-        for (int j = 0; j < MAX_CLIENTS; j++) {
-            if (clients->client_id[j] != -1) {
-                printf("%s\n", clients->name[j]);
-            }
-        }
-
-        printf("Server recived from '%s' message: %s\n",clients->message[index].myName, clients->message[index].message);
-
         if (recive == 0 || recive < BUFFER_LENGTH) {
             printf("The clients closed the connection before all of the data was sent ");
             return 0;
         }
 
-        for (int j = 0; j < MAX_CLIENTS; j++) {
-            if (clients->client_id[j] != -1 && j != index) {
-                sendback(clients->client_id[j], clients->message[index].message);
+        memcpy(&clients->message[index], buffer, BUFFER_LENGTH);
+
+        int rc = strcmp(clients->name[index], "\0");
+        if(rc == 0){
+
+            strncpy(clients->name[index],clients->message[index].myName, strlen(clients->message[index].myName));
+
+            sendOnlinelist(clients, index);
+
+        } else {
+            printf("Server recived from '%s' message: %s\n",clients->message[index].myName, clients->message[index].message);
+
+            char tempBuffor[MESSAGE_LENGTH];
+            strcpy(tempBuffor, clients->name[index]);
+            strcpy(tempBuffor, concat(tempBuffor, ": "));
+            strcpy(tempBuffor, concat(tempBuffor, clients->message[index].message));
+
+            int all = strcmp(clients->message[index].destName, "all");
+            if(all == 0) {
+                for (int j = 0; j < MAX_CLIENTS; j++) {
+                    if (clients->client_id[j] != -1 && j != index) {
+                        sendback(clients->client_id[j], tempBuffor);
+                    }
+                }
+            } else {
+                for (int j = 0; j < MAX_CLIENTS; j++) {
+                    if (clients->client_id[j] != -1 && j != index) {
+                        int dest = strcmp(clients->message[index].destName, clients->name[j]);
+                        if(dest == 0) {
+                            sendback(clients->client_id[j], tempBuffor);
+                        }
+                    }
+                }
             }
         }
     }
 
-    close(clients->client_id[index]);
     strcpy(clients->name[index],"\0");
     clients->client_id[index] = -1;
+    close(clients->client_id[index]);
+    sendOnlinelist(clients, index);
 
     return 0;
 }
