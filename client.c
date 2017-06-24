@@ -69,19 +69,7 @@ int main(int argc, char *argv[]) {
     mySockAddr.sin_addr.s_addr = inet_addr(ADDRESS);
     mySockAddr.sin_port = PORT;
 
-
-    printf("Your name: ");
-    fgets(structClientData.myName, sizeof(structClientData.myName), stdin);//read first line
-    structClientData.myName[strlen(structClientData.myName) - 1] = '\0';
-
-    //wysyla imie
-    memcpy(buffer, &structClientData, BUFFER_LENGTH);
-    if (send(mySocket, buffer, BUFFER_LENGTH, 0) == -1) {
-        perror("send() failed\n");
-    }
-
-    int myConnection = connect(mySocket, (struct sockaddr *) &mySockAddr,
-                               sizeof(struct sockaddr_in));
+    int myConnection = connect(mySocket, (struct sockaddr *) &mySockAddr, sizeof(struct sockaddr_in));
 
     if (myConnection == -1) {
         perror("connect() failed\n");
@@ -93,7 +81,15 @@ int main(int argc, char *argv[]) {
         printf("CONNECTION SUCCESS\n");
     }
 
+    printf("Your name: ");
+    fgets(structClientData.myName, sizeof(structClientData.myName), stdin);//read first line
+    structClientData.myName[strlen(structClientData.myName) - 1] = '\0';
 
+    //wysyla imie
+    memcpy(buffer, &structClientData, BUFFER_LENGTH);
+    if (send(mySocket, buffer, BUFFER_LENGTH, 0) == -1) {
+        perror("send() failed\n");
+    }
 
     printf("Send to: ");
     fgets(structClientData.destName, sizeof(structClientData.destName), stdin);

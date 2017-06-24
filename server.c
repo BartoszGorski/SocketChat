@@ -32,7 +32,7 @@ struct clientMessageDate {
 struct clientData {
     int client_id[MAX_CLIENTS];
     int indexLastConnected;
-    char name[NAME_SIZE];
+    char name[NAME_SIZE][MAX_CLIENTS];
     struct clientMessageDate message[MAX_CLIENTS];
 };
 
@@ -63,19 +63,15 @@ void *recive(void *clientData) {
 
         memcpy(&clients->message[index], buffer, BUFFER_LENGTH);
 
-        if(!clients->name[0]){
-            strncpy(clients->name,clients->message[index].myName,NAME_SIZE);
-
-            printf("strlen(clients->name) %d\n",strlen(clients->name));
-            printf("clients->message.myName %s\n",clients->message[index].myName);
-            printf("clients->name %s\n",clients->name);
-
+        int rc = strcmp(clients->name[index], "\0");
+        if(rc == 0){
+            strncpy(clients->name[index],clients->message[index].myName,NAME_SIZE);
         }
 
         printf("Online:\n");
         for (int j = 0; j < MAX_CLIENTS; j++) {
             if (clients->client_id[j] != -1) {
-                printf("%s\n", clients->name);
+                printf("%s\n", clients->name[j]);
             }
         }
 
@@ -94,6 +90,7 @@ void *recive(void *clientData) {
     }
 
     close(clients->client_id[index]);
+    strcpy(clients->name[index],"\0");
     clients->client_id[index] = -1;
 
     return 0;
@@ -151,10 +148,11 @@ int main() {
 
     struct clientData clientInfo;
     clientInfo.indexLastConnected = 0;
-//    clientInfo.name[0] = '0';
+
 
     for (int i = 0; i < MAX_CLIENTS; i++) {
         clientInfo.client_id[i] = -1;
+        strcpy(clientInfo.name[i], "\0");
     }
 
     pthread_t recive_thread;
